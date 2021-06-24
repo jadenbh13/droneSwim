@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<!-- I (Steve) implemented my "Truthful Sines" idea with Cayden based on code we found from Pierre Guilleminot’s Blocks at bl.ocks.org/jinroh which Cayden and I modified for this purpose; jd and I are adding sound.  See http://wearcam.org/kineveillance.pdf regarding the "truthful sines" concept... -->
+<head>
+<meta charset="utf-8">
+<style>
+body {
+  font: 13px/13px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  position: relative;
+  width: 960px;
+}
+form {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+}
+.hide {
+  display: none;
+}
+.coeff .dot {
+  fill: hsla(207, 63%, 27%, 0.2);
+}
+.coeff.last .dot {
+  fill: hsla(207, 63%, 27%, 1.0);
+}
+.coeff .circle {
+  fill: none;
+  stroke: hsl(0, 0%, 70%);
+}
+.coeff.first .circle {
+  fill: none;
+  stroke: hsl(0, 0%, 30%);
+}
+.coeff.last .circle {
+  display: none;
+}
+.graphreal {
+  fill: none;
+  stroke: red;
+  stroke-width: 5px;
+}
+.graphimag {
+  fill: none;
+  stroke: green;
+  stroke-width: 5px;
+}
+.trace {
+  fill: none;
+  stroke: steelblue;
+}
+.proj {
+  fill: none;
+  stroke: #000;
+}
+.axis {
+  stroke: hsl(0, 0%, 70%);
+}
+
+.vector {
+  stroke: hsl(0, 0%, 0%);
+}
+</style>
+</head>
+<body>
+<form>
+  <p>
+    <select id="type_real_complex">
+      <option value="complex">Complex</option>
+      <option value="complex2">Complex2</option>
+      <option value="real">Real</option>
+    </select>
+    <select id="type_mann_hilbert">
+      <option value="mann">Mann</option>
+      <option value="hilbert">Hilbert</option>
+    </select>
+    <select id="type">
+      <option value="square">Square</option>
+      <option value="triangle">Triangle</option>
+      <option value="sawtooth">Sawtooth</option>
+      <option value="pulse">Pulse</option>
+    </select>
+    <input id="size" type="number" value="3" min="1" max="4000" step="1">
+    <input id="mute" name="mute" type="checkbox"><label for="mute">Mute</label>
+    <input type="button" id="squares" value="Begin"></input>
+    <input type="button" id="stopIt" value="Stop it"</input>
+  </p>
+  <p><input id="freq" type="range" value="0.2" min="0.0" max="0.4" step="0.01"> <label>Speed</label></p>
+</form>
+<input id="amp" type="range" value="0.5" min="0.0" max="1" step="0.01"> <label>Amplitude</label></input>
+<input id="fre" type="range" value="0.25" min="0.0" max="0.5" step="0.01"> <label>Frequency</label></input>
+<p id="mnD" ></p>
+<p id="mnD2" ></p>
+<p id="dire" ></p>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-app.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-analytics.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-database.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyDh19fiYJehJ7tzM9MOiZCao1W_xMSQSIY",
+    authDomain: "jaden-drone.firebaseapp.com",
+    databaseURL: "https://jaden-drone.firebaseio.com",
+    projectId: "jaden-drone",
+    storageBucket: "jaden-drone.appspot.com",
+    messagingSenderId: "521899221302",
+    appId: "1:521899221302:web:dc25904d89b3e035e31397",
+    measurementId: "G-FF96M823P7"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+  var database = firebase.database();
+</script>
+<script id="worker1" type="javascript/worker">
+  importScripts('https://www.gstatic.com/firebasejs/8.6.2/firebase-app.js');
+  importScripts('https://www.gstatic.com/firebasejs/8.6.2/firebase-messaging.js');
+  importScripts('https://www.gstatic.com/firebasejs/8.6.2/firebase-database.js');
+  importScripts('https://d3js.org/d3.v3.min.js');
+  var firebaseConfig = {
+    apiKey: "AIzaSyDh19fiYJehJ7tzM9MOiZCao1W_xMSQSIY",
+    authDomain: "jaden-drone.firebaseapp.com",
+    databaseURL: "https://jaden-drone.firebaseio.com",
+    projectId: "jaden-drone",
+    storageBucket: "jaden-drone.appspot.com",
+    messagingSenderId: "521899221302",
+    appId: "1:521899221302:web:dc25904d89b3e035e31397",
+    measurementId: "G-FF96M823P7"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  var t = 0;
+  setInterval(function(){
+    console.log(d3.select("#amp"));
+    //var hb = document.getElementById('mnD').innerText;
+    firebase.database().ref('/').update({
+        currentSin: t
+    });
+    t += 1
+  }, 50);
+  self.addEventListener('message', function(e) {
+    var doc = e.data;
+    console.log(doc);
+  }, false);
+
+</script>
+<script>
+
+(function() {
+
+  "use strict";
+
+
+  /*var blob = new Blob([
+    document.querySelector('#worker1').textContent
+  ], { type: "text/javascript" })
+
+  var worker = new Worker(window.URL.createObjectURL(blob));
+  worker.onmessage = function(e) {
+    console.log("Received: " + e.data);
+  }*/
+
+
+
+  var relY = 0;
+  var mnD = document.getElementById('mnD');
+  var mnD2 = document.getElementById('mnD2');
+  var dire = document.getElementById('dire');
+  var π = Math.PI
+  var τ = 2 * Math.PI
+  //var MannFunArray = [1,0,.3333333,0,.2,0,.14285714285714285,0,.111111111111,0,.09090909090909,0];
+  var MannFunArray = [0];
+  var DelayArray = [0];
+  var squaresBtn = document.getElementById("squares");
+  var mann_hilbert = "mann";
+  var real_complex = "complex";
+  var freqVal = 1;
+
+  mnD.onchange = function() {
+    console.log(mnD.innerText);
+  }
+
+  var types = {
+    square: function(n) {
+      //MannFunArray.pop();
+      MannFunArray.push((((n+1) % 2) ? 0 : 1) / n);
+      return (((n + 1) % 2) ? 0 : 1) / n;
+    },
+    triangle: function(n) {
+      if (!(n % 2)) {
+        return 0;
+
+      }
+      MannFunArray.push((((n-1) % 4 === 1) ? 1 : -1) / (n * n));
+      return ((n % 4 === 1) ? 1 : -1) / (n * n);
+    },
+    sawtooth: function(n) {
+      MannFunArray.push(((n % 2) ? -1 : 1) / (n + 1));
+      return ((n % 2) ? -1 : 1) / (n + 1);
+    },
+    fibonacci: function(n) {
+      var fst = 0.01, sec = 0.01, add;
+      for (var i = 0; i < n; i++) {
+        add = fst + sec;
+        fst = sec;
+        sec = add;
+      }
+      return add;
+    },
+    pulse: function(n) {
+      MannFunArray.push(0.1);
+      return 0.1;
+    }
+  };
+  function testF() {
+    console.log("SWs");
+  }
+
+  function FThilbertr(A, N, φ) { //Imaginary Hilbert waveform
+    φ = φ || 0;
+    return function(x) {
+      var n = -1, y = 0;
+      while (++n < N) {
+    y += A[n] * Math.sin(τ * (n + 1) * x + φ);
+
+      }
+      return y;
+    }
+  }
+  function FThilberti(A, N, φ, C) { //Real Hilbert waveform
+    φ = φ || 0;
+    return function(x) {
+      var n = -1, y = 0;
+      while (++n < N) {
+    y += A[n] * Math.sin(τ * (n + 1) * x + φ);
+
+      }
+      return y;
+    }
+  }
+
+  function FTmannr(A, N, φ, C) { //Imaginary Mann waveform
+    φ = φ || 0;
+    return function(x) {
+      var n = -1, y = 0;
+      if(C == types.square) {
+          while (++n < N) {
+                var harmonic = n+1;
+                if (harmonic%2==0){
+                    continue;
+                }
+                y += ((-1)**((harmonic-1)/2)/harmonic) * Math.cos(τ * harmonic * (freqVal * x));
+          }
+      } else if (C == types.triangle) {
+            while (++n < N) {
+                  var harmonic = n+1;
+                  if (harmonic%2==0){
+                      continue;
+                  }
+                  y += 0.5 * ((1-(-1)**harmonic)/(harmonic**2)) * Math.cos(τ * harmonic * (freqVal * x));
+            }
+      } else if (C == types.sawtooth) {
+          while (++n < N) {
+                var harmonic = n+1;
+                y += -1 * (((-1)**harmonic)/(harmonic+1)) * Math.sin(τ * harmonic * (freqVal * x));
+          }
+      } else if (C == types.pulse) {
+            while (++n < N) {
+                  var harmonic = n+1;
+                  y += -0.1 * Math.sin(τ * harmonic * (freqVal * x));
+            }
+      }
+      return y;
+    }
+  }
+
+  function FTmanni(A, N, φ, C) { //Real Mann waveform
+    φ = φ || 0;
+   return function(x) {
+     var n = -1, y = 0;
+     if(C == types.square) {
+         while (++n < N) {
+               var harmonic = n+1;
+               if (harmonic%2==0){
+                   continue;
+               }
+               y += ((-1)**((harmonic-1)/2)/harmonic) * Math.sin(harmonic*((τ * (freqVal * x)) - (τ/4)) + (τ/4));
+         }
+     } else if (C == types.triangle) {
+           while (++n < N) {
+                 var harmonic = n+1;
+                 if (harmonic%2==0){
+                     continue;
+                 }
+                 y += 0.5 * ((1-(-1)**harmonic)/(harmonic**2)) * Math.sin(harmonic*((τ * (freqVal * x)) - (τ/4)) + (τ/4));
+           }
+     } else if (C == types.sawtooth) {
+         while (++n < N) {
+               var harmonic = n+1;
+               //alert("Imaginary harmonic: " + harmonic);
+               y += -1 * (((-1)**harmonic)/(harmonic+1)) * Math.cos(harmonic*((τ * (freqVal * x)) - (τ/4)) + (τ/4));
+         }
+     } else if (C == types.pulse) {
+           while (++n < N) {
+                 var harmonic = n+1;
+                 y += -0.1 * Math.cos(harmonic*((τ * (freqVal * x)) - (τ/4)) + (τ/4));
+           }
+       }
+       //alert("imaginary output" + y);
+
+     return y;
+   }
+  }
+
+  function once(fn) {
+    var exec = false;
+    return function() {
+      if (exec) return;
+      exec = true,
+      fn && fn();
+    };
+  }
+
+  var
+    margin = {top: 0, right: 0, bottom: 0, left: 100},
+    W = 1050, // width that approximates isotropic axes
+    H = 1050, // height that approximates isotropic axes
+    w = W - margin.left - margin.right,
+    h = H - margin.top - margin.bottom,
+
+    radius = 140,
+    theta  = 0,
+    xmax   = 3.0,
+    ymax   = 3, //(xmax * (W/h)),
+    rate   = 1 / 30,
+
+    tDomain = d3.range(0, 1.1, 1 / 1000),   // trace domain
+    grDomain = d3.range(0, xmax, xmax / 1000), // real graph domain
+    giDomain = d3.range(0, ymax, ymax / 1000), // imag graph domain
+//    giDomain = d3.scale.linear().domain([-1, 1]).range([0, 2 * radius]),
+
+    C = types.square,  // coeffiecients
+    L = 12,            // size
+    F = 0.5,           // speed frequency
+//    audio_output(MannFunArray);
+
+    //yCirc = d3.scale.linear().domain([-1, 1]).range([h/2 + radius, h/2 - radius]), // must be the same as center of y-axis
+    yCirc = d3.scale.linear().domain([-1, 1]).range([h/3 + radius, h/3 - radius]), // must be the same as center of y-axis
+    xCirc = d3.scale.linear().domain([-1, 1]).range([0, 2 * radius]),
+    rAxis = d3.scale.linear().domain([0, 1]).range([0, radius]),
+    xAxis = d3.scale.linear().range([radius, W - margin.left]),
+    //yAxis = d3.scale.linear().domain([0, ymax]).range([h/2, H - margin.bottom]), // center of y-axis
+    yAxis = d3.scale.linear().domain([0, ymax]).range([h/3, H - margin.bottom]), // y-axis 1/3 of the way up height
+
+    Fxy, fx, fy,
+
+    draw, timer, data = [];
+
+  var graphreal = d3.svg.line()
+    .x(function(d) { return xAxis(d); })
+    .y(function(d) { return yCirc(fy(theta - d)); });
+
+  var graphimag = d3.svg.line()
+    .x(function(d) { return xCirc(fx(theta - d)); })
+    .y(function(d) { return yAxis(d); });
+
+  var graphimag2 = d3.svg.line()
+    .x(function(d) { return xAxis(d); })
+    .y(function(d) { return yCirc(fx(theta - d)); });
+
+  var proj = d3.svg.line()
+    .x(function(d) { return xCirc(d.x); })
+    .y(function(d) { return yCirc(d.y); });
+
+  var trace = d3.svg.line()
+    .x(function(d) { return xCirc(fx(d)); })
+    .y(function(d) { return yCirc(fy(d)); });
+
+  function gTransform(d) {
+    return "translate(" + xCirc(d.x) + "," + yCirc(d.y) + ")";
+  }
+
+  function hTransform(d) {
+    return "translate(" + xAxis(d.f) + "," + yCirc(0) + ")";
+  }
+
+  var svg = d3.select("body")
+    .append("svg")
+      .attr("width", W)
+      .attr("height", H)
+
+  svg.append("line")
+    .attr("class", "axis")
+    .attr("id", "line1")
+    .attr("y1", margin.top + yCirc(0)).attr("x1", 0)
+    .attr("y2", margin.top + yCirc(0)).attr("x2", W);
+
+  svg.append("line")
+    .attr("class", "axis")
+    .attr("id", "line2")
+    .attr("x1", margin.left + xCirc(0)).attr("y1", 0)
+    .attr("x2", margin.left + xCirc(0)).attr("y2", H);
+
+  var vis = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  //create paths, add classes to components in svg
+  var grPath = vis.append("path").attr("class", "graphreal");
+  var giPath = vis.append("path").attr("class", "graphimag");
+  var tPath = vis.append("path").attr("class", "trace");
+  var prPath = vis.append("path").attr("class", "proj");
+  var piPath = vis.append("path").attr("class", "proj");
+
+  function cache() {
+    MannFunArray = [0];
+    var A;
+    if (typeof C === "function") {
+      A = d3.range(1, L + 1).map(C);
+    } else {
+      A = C.slice(0, L);
+    }
+
+    if (mann_hilbert == "mann"){
+        fx = FTmannr(A, L - 1, π/2, C);
+        console.log(fx);
+        fy = FTmanni(A, L - 1, 0, C);
+    } else {
+        fx = FThilbertr(A, L - 1, π/2);
+        fy = FThilberti(A, L - 1, 0);
+    }
+
+
+    Fxy = A.map(function(a, i) {
+      if (mann_hilbert == "mann"){
+        return { X: FTmannr(A, i, π/2, C), Y: FTmanni(A, i, 0, C), r: Math.abs(a) };
+      } else {
+        return { X: FThilbertr(A, i, π/2), Y: FThilberti(A, i, 0), r: Math.abs(a) };
+      }
+    });
+  }
+  var prevX = 0;
+  var prevDir = "";
+  function calc() {
+    if (!Fxy) cache();
+    Fxy.forEach(function(f, i) {
+      var d = data[i] || (data[i] = {x:0,y:0,r:0});
+      d.x = f.X(theta);
+      d.y = f.Y(theta);
+      mnD2.innerText = d.x;
+      mnD.innerText = d.y;
+
+      if (d.x < prevX) {
+        dire.innerText = "Down";
+      } else if (d.x > prevX) {
+        dire.innerText = "Up";
+      } else if (d.x == prevX) {
+        dire.innerText = "Stable";
+      }
+      /*if (dire.innerText !== prevDir) {
+        makeReq(dire.innerText);
+      }*/
+      var tx = mnD.innerText;
+      var ty = mnD2.innerText;
+      makeReq4(tx, ty);
+      //makeReq(d.y);
+      d.r = f.r;
+      d.f = i + 1;
+      prevX = d.x;
+      prevDir = dire.innerText;
+    });
+    data.length = Fxy.length;
+    //audio_output(MannFunArray);
+    return data;
+  }
+
+
+  //generate circle - representation of coefficients in harmonic series
+  function coeff() {
+    var co = vis.selectAll(".coeff").data(calc());
+
+    // exit
+    co.exit().remove();
+
+    // enter
+    var en = co.enter().append("g").attr("class", "coeff");
+
+    en.append("circle").attr("class", "circle");
+    en.append("circle").attr("class", "dot").attr("r", 3);
+
+    //add vector line
+    //en.append("line").attr("class", "dot").attr("r", 9);
+//        console.log("CO IS");
+//        console.log(co);
+//        console.log("co IS");
+//        console.log(co);
+
+
+    // update
+    co.classed("last",  function(d, i) { return i === L - 1; });
+    co.classed("first", function(d, i) { return i === 0; });
+
+  //get all radii
+//  var circles = [];
+//  co.selectAll(".circle")
+//      .each(function(d, i) {
+//        var radius = d.r;
+//          circles.push(d);
+//      });
+//
+//   en.append("line")
+//    .attr("class", "vector")
+//    .attr("x1", 0).attr("y1", 0)
+//    .attr("x2", xCirc(circles[1])).attr("y2", 0);
+
+    co.select(".circle").attr("r", function(d, i) { return rAxis(d.r); })
+
+    return co;
+  }
+
+  function drawGraph() {
+    xAxis.domain([0, xmax]);
+    coeff().attr("transform", gTransform);
+    var last = data[data.length - 1];
+    prPath.attr("d", proj([last, {x:0,y:last.y}]));
+    grPath.attr("d", graphreal(grDomain));
+    if (real_complex == "complex"){
+        piPath.classed("hide", false);
+        giPath.classed("hide", false);
+        giPath.attr("d", graphimag(giDomain));
+    } else if (real_complex == "complex2") {
+        piPath.classed("hide", false);
+        giPath.classed("hide", false);
+        giPath.attr("d", graphimag2(giDomain));
+    } else {
+        piPath.classed("hide", true);
+        giPath.classed("hide", true);
+    }
+    piPath.attr("d", proj([last, {x:last.x,y:0}]));
+    tPath.attr("d", trace(tDomain));
+  }
+
+  function drawHisto() {
+    xAxis.domain([1, L]);
+    coeff().attr("transform", hTransform);
+  }
+
+  function toggle(callback) {
+    var tran;
+    tran = (draw === drawGraph) ? hTransform : gTransform;
+    draw = (draw === drawGraph) ? drawHisto : drawGraph;
+    coeff().transition()
+      .duration(1000)
+      .attr("transform", tran)
+      .each("end", once(callback));
+  }
+
+
+  function toggleGraph() {
+    xAxis.domain([0, xmax]);
+    toggle(function() {
+      prPath.classed("hide", false);
+      piPath.classed("hide", false);
+      gPath.classed("hide", false);
+      tPath.classed("hide", false);
+      play();
+    });
+  }
+
+  function toggleHisto() {
+    xAxis.domain([1, L]);
+    prPath.classed("hide", true);
+    piPath.classed("hide", true);
+    gPath.classed("hide", true);
+    tPath.classed("hide", true);
+    pause(); toggle(drawHisto);
+  }
+
+  function play() {
+    if (timer) return;
+    (function loop() {
+      drawGraph();
+      theta += F * rate;
+      timer = setTimeout(loop, rate * 1000);
+    })();
+    //MannFunArray=[];
+    MannFunArray=[0];
+  }
+
+  function pause() {
+    if (!timer) return;
+    clearTimeout(timer);
+    timer = null;
+  }
+
+  function redraw() {
+    cache(); draw();
+  }
+
+
+//  var MannFunArray = [1,0,.3333333,0,.2,0,.14285714285714285,0,.111111111111,0,.09090909090909,0];
+var squaresBtn = document.getElementById("squares");
+var stop = document.getElementById("stopIt");
+
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+var mnList = [];
+var base = 440;
+
+var get = function(url){
+    return new Promise(function(resolve,reject){
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function(){
+            if(xhr.readyState === 4) {
+                if (xhr.status == 200) {
+                    var result = xhr.responseText;
+                    result = JSON.parse(result);
+                    resolve(result);
+                }else {
+                    reject(xhr);
+                }
+            }
+        }
+        xhr.open("GET",url,true);
+        xhr.send(null);
+    })
+}
+
+
+console.log(base);
+console.log(mnList.pop());
+
+var audioContext = new AudioContext();
+var gnList = []
+var gainNode = audioCtx.createGain();
+gainNode.connect(audioCtx.destination);
+var gain = 0.5;
+var playSound = false;
+gainNode.gain.setValueAtTime(gain, audioCtx.currentTime);
+
+function setMute() {
+  playSound = !playSound;
+  if(document.getElementById('mute').checked == false) {
+    audioCtx.resume();
+  } else {
+    audioCtx.suspend();
+  }
+}
+
+var bv;
+function makeReq(arg) {
+  var mStr = 'http://127.0.0.1:5000/' + arg.toString() + '/giveVal'
+  //worker.postMessage(arg.toString());
+  $.ajax({url: mStr, success: function(result){
+    var tv = result;
+  }});
+}
+
+function makeReq2(arg) {
+  var mStr = 'http://127.0.0.1:5000/' + arg.toString() + '/coordX'
+  //worker.postMessage(arg.toString());
+  $.ajax({url: mStr, success: function(result){
+    var tv = result;
+  }});
+}
+
+function makeReq3(arg) {
+  var mStr = 'http://127.0.0.1:5000/' + arg.toString() + '/coordY'
+  //worker.postMessage(arg.toString());
+  $.ajax({url: mStr, success: function(result){
+    var tv = result;
+  }});
+}
+
+
+function makeReq4(arg1, arg2) {
+  var mStr = 'http://127.0.0.1:5000/' + arg1.toString()  + '/' + arg2.toString() + '/coords'
+  //worker.postMessage(arg.toString());
+  $.ajax({url: mStr, success: function(result){
+    var tv = result;
+  }});
+}
+
+
+var calledOnce = false;
+//is this main???
+//audio generator
+function begin(fret) {
+  var vs = document.getElementById("size").value;
+  var v = (vs / 2);
+  var emmsLists = []
+  var h;
+  for (h = 0; h < v; h++) {
+
+    var osc2 = audioCtx.createOscillator();
+    osc2.type = document.getElementById("type").value;
+    osc2.frequency.value = (fret * (h + 1));
+    osc2.connect(gainNode);
+    osc2.start(audioCtx.currentTime);
+    emmsLists.push(osc2);
+  }
+  mnList = emmsLists;
+  playSound = true;
+  setMute();
+}
+
+
+  function stopMn() {
+    var i;
+    var gh = mnList.length;
+    for (i = 0; i < gh; i++) {
+      mnList[i].stop(audioCtx.currentTime);
+    }
+  }
+  var vt = 0
+  $("#stopIt").hide();
+  squaresBtn.onclick = function() {
+    if (playSound == false && vt == 0) {
+      if(document.getElementById('mute').checked == false) {
+        /*$("#stopIt").show();
+        $("#squares").hide();*/
+        begin(base);
+        console.log(mnList);
+        vt += 1;
+      }
+    }
+  }
+
+  window.onload = (event) => {
+    var thi = document.getElementById('size').value;
+    L = +thi;
+    redraw();
+    //MannFunArray=[];
+    MannFunArray=[0];
+    var S = (thi / 2);
+    if(Number.isInteger(S) == true) {
+      var d;
+      var gh = mnList.length;
+      for (d = 0; d < gh; d++) {
+        mnList[d].stop(audioCtx.currentTime);
+      }
+      var emmsList = []
+      var i;
+      for (i = 0; i < S; i++) {
+
+        var osc1 = audioCtx.createOscillator();
+        osc1.type = document.getElementById("type").value;
+        osc1.frequency.value = (base * (i + 1));
+        osc1.connect(gainNode);
+        osc1.start(audioCtx.currentTime);
+        emmsList.push(osc1);
+      }
+      if(S == 1) {
+        gainNode.gain.value = 0;
+      } else {
+        gainNode.gain.value = document.getElementById('amp').value;
+      }
+      mnList = emmsList;
+      setMute();
+    }
+    var nbv = document.getElementById('freq').value;
+    F = +this.value;
+    redraw();
+
+    var valss = document.getElementById('fre').value;
+    freqVal = (valss * 2);
+    var basss = Math.round(440 * (valss * 2));
+    base = basss;
+    stopMn();
+    setTimeout(function(){
+      var ds;
+      var ghs = mnList.length;
+      for (ds = 0; ds < ghs; ds++) {
+        mnList[ds].stop(audioCtx.currentTime);
+      }
+      redraw();
+      //begin(basss);
+    }, 700);
+
+
+  };
+
+  d3.select("svg").on("click", function() { (draw === drawHisto) ? toggleGraph() : toggleHisto(); });
+  d3.select("#freq").on("change", function() {
+    F = +this.value;
+    redraw();
+  });
+  d3.select("#amp").on("change", function() {
+
+
+    var vals = this.value;
+    var tw = vals * 280;
+    gainNode.gain.value = this.value;
+    radius = tw;
+    margin = {top: 0, right: 0, bottom: 0, left: 100};
+    W = 1050;
+    H = 1050;
+    w = W - margin.left - margin.right;
+    h = H - margin.top - margin.bottom;
+    theta  = 0;
+    xmax   = 3.0;
+    ymax   = 3;
+    rate   = 1 / 60;
+    tDomain = d3.range(0, 1.1, 1 / 1000);
+    grDomain = d3.range(0, xmax, xmax / 1000);
+    giDomain = d3.range(0, ymax, ymax / 1000);
+
+    yCirc = d3.scale.linear().domain([-1, 1]).range([h/3 + radius, h/3 - radius]);
+    xCirc = d3.scale.linear().domain([-1, 1]).range([0, 2 * radius]);
+    rAxis = d3.scale.linear().domain([0, 1]).range([0, radius]);
+    yAxis = d3.scale.linear().domain([0, ymax]).range([h/2, H - margin.bottom]), // center of y-axis
+    xAxis = d3.scale.linear().range([radius, W - margin.left]);
+    yAxis = d3.scale.linear().domain([0, ymax]).range([h/3, H - margin.bottom]);
+
+    graphreal = d3.svg.line()
+      .x(function(d) {
+        return xAxis(d);
+      })
+      .y(function(d) { return yCirc(fy(theta - d)); });
+
+    graphimag = d3.svg.line()
+      .x(function(d) { return xCirc(fx(theta - d)); })
+      .y(function(d) { return yAxis(d); });
+
+    graphimag2 = d3.svg.line()
+      .x(function(d) { return xAxis(d); })
+      .y(function(d) { return yCirc(fx(theta - d)); });
+
+    proj = d3.svg.line()
+      .x(function(d) { return xCirc(d.x); })
+      .y(function(d) { return yCirc(d.y); });
+
+    trace = d3.svg.line()
+      .x(function(d) { return xCirc(fx(d)); })
+      .y(function(d) { return yCirc(fy(d)); });
+
+    d3.select("#line2")
+      .attr("x1", (tw + 100))
+      .attr("x2", (tw + 100));
+
+    redraw();
+
+
+
+
+
+  });
+  d3.select("#fre").on("change", function() {
+    var vals = this.value;
+    freqVal = (vals * 2);
+    var bas = Math.round(440 * (vals * 2));
+    base = bas;
+    stopMn();
+    setTimeout(function(){
+      var d;
+      var gh = mnList.length;
+      for (d = 0; d < gh; d++) {
+        mnList[d].stop(audioCtx.currentTime);
+      }
+      begin(bas);
+    }, 700);
+
+    console.log(base);
+    console.log(mnList.pop());
+
+  });
+  d3.select("#size").on("change", function() {
+    L = +this.value; redraw();
+    //MannFunArray=[];
+    MannFunArray=[0];
+    var S = (this.value / 2);
+    if(Number.isInteger(S) == true) {
+      var d;
+      var gh = mnList.length;
+      for (d = 0; d < gh; d++) {
+        mnList[d].stop(audioCtx.currentTime);
+      }
+      var emmsList = []
+      var i;
+      for (i = 0; i < S; i++) {
+
+        var osc1 = audioCtx.createOscillator();
+        osc1.type = document.getElementById("type").value;
+        osc1.frequency.value = (base * (i + 1));
+        osc1.connect(gainNode);
+        osc1.start(audioCtx.currentTime);
+        emmsList.push(osc1);
+      }
+      if(S == 1) {
+        gainNode.gain.value = 0;
+      } else {
+        gainNode.gain.value = document.getElementById('amp').value;
+      }
+      mnList = emmsList;
+      setMute();
+    }
+  });
+  d3.select("#type").on("change", function() {
+    C = types[this.value];
+      //MannFunArray=[];
+      //audio_output(MannFunArray);
+    MannFunArray=[0];
+
+    var vel = this.value;
+    var z;
+    for (z = 0; z < mnList.length; z++) {
+      mnList[z].type = vel;
+    }
+    redraw();
+  });
+  d3.select("#type_real_complex").on("change", function() { real_complex = this.value; redraw(); });
+  d3.select("#type_mann_hilbert").on("change", function() { mann_hilbert = this.value; redraw();
+    //audio_output(MannFunArray);
+    MannFunArray=[0];});
+  d3.select("#mute").on("change", function() { redraw(); setMute();});
+  draw = drawGraph;
+  play();
+})();
+</script>
+</body>
