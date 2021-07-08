@@ -83,15 +83,16 @@ form {
     <input type="button" id="squares" value="Begin"></input>
     <input type="button" id="stopIt" value="Stop it"</input>
   </p>
-  <p><input id="freq" type="range" value="0.2" min="0.0" max="0.4" step="0.01"> <label>Speed</label></p>
+  <p><input id="freq" type="range" value="0.05" min="0.0" max="0.4" step="0.01"> <label>Speed</label></p>
 </form>
-<input id="amp" type="range" value="0.5" min="0.0" max="1" step="0.01"> <label>Amplitude</label></input>
-<input id="fre" type="range" value="0.25" min="0.0" max="0.5" step="0.01"> <label>Frequency</label></input>
+<input id="amp" type="range" value="0.3" min="0.0" max="1" step="0.01"> <label>Amplitude</label></input>
+<input id="fre" type="range" value="1.5" min="0.0" max="2.0" step="0.01"> <label>Frequency</label></input>
 <p id="mnD" ></p>
 <p id="mnD2" ></p>
 <p id="thet" ></p>
 <p id="tr" ></p>
 <p id="dire" ></p>
+<p id="cycs" ></p>
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-app.js"></script>
@@ -158,7 +159,11 @@ form {
   /*var blob = new Blob([
     document.querySelector('#worker1').textContent
   ], { type: "text/javascript" })
-
+@app.route('/<n>/coordX')
+def poseX(n):
+    with open(file2, 'w') as filetowrite:
+        filetowrite.write(n)
+    return n
   var worker = new Worker(window.URL.createObjectURL(blob));
   worker.onmessage = function(e) {
     console.log("Received: " + e.data);
@@ -172,6 +177,7 @@ form {
   var thet = document.getElementById('thet');
   var dire = document.getElementById('dire');
   var tr = document.getElementById('tr');
+  var cycs = document.getElementById('cycs');
   var tru = true;
   tr.innerText = tru;
   var π = Math.PI
@@ -183,7 +189,9 @@ form {
   var squaresBtn = document.getElementById("squares");
   var mann_hilbert = "mann";
   var real_complex = "complex";
-  var freqVal = 1;
+  var freqVal = 5;
+  var cycles = 0;
+  makeReq5(cycles);
 
   var types = {
     square: function(n) {
@@ -267,7 +275,7 @@ form {
       } else if (C == types.sawtooth) {
           while (++n < N) {
                 var harmonic = n+1;
-                if (theta >= 2) {
+                if (theta >= 1.2) {
                   //theta = 0;
                   tru = false;
                   tr.innerText = tru;
@@ -275,6 +283,11 @@ form {
                 if (theta <= 0) {
                   //theta = 0;
                   tru = true;
+                  if (tr.innerText != "true") {
+                    cycles += 1;
+                    cycs.innerText = cycles;
+                    makeReq5(cycles);
+                  }
                   tr.innerText = tru;
                 }
                 //y += -1 * (((-1)**harmonic)/(harmonic+1)) * Math.sin(τ * harmonic * (freqVal * x));
@@ -735,7 +748,13 @@ function makeReq4(arg1, arg2) {
     var tv = result;
   }});
 }
-
+function makeReq5(arg1) {
+  var mStr = 'http://127.0.0.1:5000/' + arg1.toString()  + '/cycs';
+  //worker.postMessage(arg.toString());
+  $.ajax({url: mStr, success: function(result){
+    var tv = result;
+  }});
+}
 
 var calledOnce = false;
 //is this main???
@@ -867,27 +886,49 @@ function begin(fret) {
     xAxis = d3.scale.linear().range([radius, W - margin.left]);
     yAxis = d3.scale.linear().domain([0, ymax]).range([h/3, H - margin.bottom]);
 
+    xV = 0;
+    yV = 0;
+
     graphreal = d3.svg.line()
       .x(function(d) {
         return xAxis(d);
       })
-      .y(function(d) { return yCirc(fy(theta - d)); });
-
+      .y(function(d) {
+        xV = fy(theta - d);
+        mnD.innerText = xV;
+        return yCirc(fy(theta - d));
+      });
     graphimag = d3.svg.line()
-      .x(function(d) { return xCirc(fx(theta - d)); })
-      .y(function(d) { return yAxis(d); });
-
+      .x(function(d) {
+        yV = fx(theta - d);
+        mnD2.innerText = yV;
+        return xCirc(fx(theta - d));
+      })
+      .y(function(d) {
+        return yAxis(d);
+      });
     graphimag2 = d3.svg.line()
-      .x(function(d) { return xAxis(d); })
-      .y(function(d) { return yCirc(fx(theta - d)); });
+      .x(function(d) {
+        return xAxis(d);
+      })
+      .y(function(d) {
+        return yCirc(fx(theta - d));
+      });
 
     proj = d3.svg.line()
-      .x(function(d) { return xCirc(d.x); })
-      .y(function(d) { return yCirc(d.y); });
+      .x(function(d) {
+        return xCirc(d.x);
+      })
+      .y(function(d) {
+        return yCirc(d.y);
+      });
 
     trace = d3.svg.line()
-      .x(function(d) { return xCirc(fx(d)); })
-      .y(function(d) { return yCirc(fy(d)); });
+      .x(function(d) {
+        return xCirc(fx(d)); })
+      .y(function(d) {
+        return yCirc(fy(d));
+      });
 
     d3.select("#line2")
       .attr("x1", (tw + 100))

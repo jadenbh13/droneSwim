@@ -5,6 +5,7 @@ app = Flask(__name__)
 file1 = "dir.txt"
 file2 = "coordX.txt"
 file3 = "coordY.txt"
+file4 = "cycs.txt"
 @app.route('/')
 def audio():
     return render_template('saw.html')
@@ -19,6 +20,11 @@ def giveVal(mn):
 @app.route('/<n>/coordX')
 def poseX(n):
     with open(file2, 'w') as filetowrite:
+        filetowrite.write(n)
+    return n
+@app.route('/<n>/cycs')
+def cycle(n):
+    with open(file4, 'w') as filetowrite:
         filetowrite.write(n)
     return n
 @app.route('/<n>/coordY')

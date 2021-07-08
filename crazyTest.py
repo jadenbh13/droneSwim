@@ -6,7 +6,8 @@ from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crazyflie.syncLogger import SyncLogger
 from cflib.utils import uri_helper
-
+import math
+import cmath
 # URI to the Crazyflie to connect to
 uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
 
@@ -94,28 +95,30 @@ def landDrone(cf):
 	cf.commander.send_stop_setpoint()
 
 def setPose(cf, xCord, yCord):
-	posi = (0, yCord, xCord, 0)
+	posi = (xCord, yCord, 0, 0)
 	cf.commander.send_position_setpoint(0, yCord, xCord, 0)
 
 def run_sequence(scf, sequence):
 	cf = scf.cf
 	try:
-		setPose(cf, 0.6, 0)
-		time.sleep(2)
+		#setPose(cf, 0.7, 0)
+		time.sleep(0.3)
 		while True:
 			fx = open("coordX.txt", "r")
 			fy = open("coordY.txt", "r")
 			xC = fx.read()
 			yC = fy.read()
 			if xC != None and xC != "":
-				mX = 0.6 + (float(xC) / 5)
+				mX = 0.7 + (float(xC) / 7)
 				if mX < 0.05:
 					mX = 0.05
 				#print(mX)
 				if yC != None and yC != "":
-					mY = float(yC) / 5
-					print(mY)
-					setPose(cf, mX, mY)
+					mY = float(yC) / 7
+					#print(mY)
+					#arc = math.atan(mY / mX)
+					#print(arc)
+					#setPose(cf, mX, mY)
 
 	except KeyboardInterrupt:
 
@@ -125,10 +128,10 @@ def run_sequence(scf, sequence):
 		print("   ")
 		print("   ")
 		print('Closing!')
-		for i in range(30):
+		"""for i in range(30):
 			cf.commander.send_position_setpoint(0, 0, 0.1, 0)
 			time.sleep(0.1)
-		cf.commander.send_stop_setpoint()
+		cf.commander.send_stop_setpoint()"""
 	# Make sure that the last packet leaves before the link is closed
 	# since the message queue is not flushed before closing
 
