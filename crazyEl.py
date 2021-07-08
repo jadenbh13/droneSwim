@@ -31,7 +31,7 @@ p = 0
 
 start = time.time()
 
-def pie(scr,color,center,radius,start_angle,stop_angle):
+"""def pie(scr,color,center,radius,start_angle,stop_angle):
 	theta=start_angle
 	while theta <= stop_angle:
 		pygame.draw.line(scr,color,center,
@@ -46,7 +46,7 @@ def thf(ph):
 	pie(scr,(255,0,0),(winWidth//2,winHeight//2),250,0,ph)
 	bv += 1
 	pygame.display.update()
-	time.sleep(0.1)
+	time.sleep(0.1)"""
 
 def wait_for_position_estimator(scf):
 	print('Waiting for estimator to find position...')
@@ -121,9 +121,129 @@ def fileSet(name, one, two, three, ts):
 		stV = str(one) + ", " + str(two) + ", " + str(three) + ", " + str(ts)
 		files.write(stV)
 
+def sec(numbers):
+	m1 = m2 = float('inf')
+	for x in numbers:
+		if x <= m1:
+			m1, m2 = x, m1
+		elif x < m2:
+			m2 = x
+	return m2
+
+def closest(numb):
+	close = []
+	closeR = []
+	newDeg = []
+	degArr = [0, 90, 180, 270, 360]
+	for t in degArr:
+		un = abs(t - numb)
+		closeR.append(un)
+	nv = min(closeR)
+	#print(nv)
+	numbs = 0
+	if numb < 1000:
+		h = 0
+		secondArr = []
+		#print(closeR)
+		while h < len(closeR):
+			if closeR[h] == min(closeR):
+				close += [h]
+			if closeR[h] == sec(closeR):
+				close += [h]
+			h += 1
+	"""else:
+		h = 0
+		while h < len(closeR):
+			if closeR[h] == max(closeR):
+				close += [h]
+			h += 1"""
+	twoArr = []
+	for g in close:
+		twoArr += [degArr[g]]
+	realTwo = list(dict.fromkeys(twoArr))
+	return sorted(realTwo)
+
+def perCol(col1, col2, per1, per2):
+	newCol1 = []
+	newCol2 = []
+	for t in col1:
+		j = t * per1
+		newCol1 += [j]
+
+	for k in col2:
+		m = k * per2
+		newCol2 += [m]
+	finalCol = []
+	v = 0
+	while v < len(newCol1):
+		jh = 2 * ((newCol1[v] + newCol2[v]) / 2)
+		finalCol += [(jh / 255)]
+		v += 1
+	return finalCol
+
+def getRgb(inp):
+	mnArr = closest(inp)
+	firLis = mnArr
+	index = min(mnArr, key=lambda x:abs(x-inp))
+	inX = 0
+	nonInx = 0
+	d = 0
+	while d < len(mnArr):
+		if mnArr[d] == index:
+			inX = d
+		else:
+			if d < 2:
+				nonInx = d
+		d += 1
+	base = firLis[0]
+	bigNum = firLis[1] - base
+	per = (inp - base) / bigNum
+	per2 = 1.0 - per
+	col1 = []
+	col2 = []
+	newCol = []
+	perL = [per, per2]
+	maxP = max(perL)
+	minP = min(perL)
+	i = 0
+	while i < len(mnArr):
+		if i == 0:
+			if mnArr[i] == 0:
+				col1 = [0, 255, 0]
+			if mnArr[i] == 90:
+				col1 = [255, 127.5, 0]
+			if mnArr[i] == 180:
+				col1 = [255, 0, 0]
+			if mnArr[i] == 270:
+				col1 = [0, 0, 255]
+			if mnArr[i] == 360:
+				col1 = [0, 255, 0]
+		elif i == 1:
+			if mnArr[i] == 0:
+				col2 = [0, 255, 0]
+			if mnArr[i] == 90:
+				col2 = [255, 127.5, 0]
+			if mnArr[i] == 180:
+				col2 = [255, 0, 0]
+			if mnArr[i] == 270:
+				col2 = [0, 0, 255]
+			if mnArr[i] == 360:
+				col2 = [0, 255, 0]
+
+		i += 1
+	colL = [col1, col2]
+	"""print(mnArr)
+	print(colL[inX])
+	print(maxP)
+	print(colL[nonInx])
+	print(minP)"""
+	finalColour = perCol(colL[inX], colL[nonInx], maxP, minP)
+	return finalColour
+
+
 def ledTiming(x, y, ts):
-	W = complex(1000, 1000) # Define fourier operator with x and y input
-	newW = complex((x * -1), y)
+	W = complex(-255, 0) # Define fourier operator with x and y input
+	newP = 0
 
 	mag = 0
 	o = math.pi/180 # Degree symbol
@@ -132,9 +252,11 @@ def ledTiming(x, y, ts):
 
 	mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
 	print("	")
-	newP = 180 - ((cmath.phase(newW))/o)
 	p = 180 - ((cmath.phase(W))/o) # phase shift
-	thf(newP)
+	#print(p)
+	if p > 180:
+		newP = 180 - p
+	#print(newP)
 	r = 0
 	b = 0
 	g = 0
@@ -157,7 +279,7 @@ def ledTiming(x, y, ts):
 		b = (upper - p) / 72
 		#Blue is highest, G is added
 		#Cyan colour is produced
-	print("	")
+	print(mag)
 
 	R = math.floor(r * (mag))
 	G = math.floor(g * (mag))
@@ -165,8 +287,6 @@ def ledTiming(x, y, ts):
 	#B = B - 50
 	bt = [R, G, B]
 	nb = max(bt)
-	print(nb)
-	print(f"{R}, {G}, {B}")
 	if nb > 255:
 		by = nb / 255
 		R = R / by
@@ -174,11 +294,12 @@ def ledTiming(x, y, ts):
 		B = B / by
 
 	#Multiplied by magnitude for fade with distance than by 2 for brighter overall
-	print(f"{R}, {G}, {B}, {x}, {y}, {p}, {mag}")
-	#Print all values in a row
-	vt = [R, G, B]
-	fileSet("colRec15.txt", R, G, B, ts)
-	return vt # Return RGB array
+	#print(f"{R}, {G}, {B}, {p}")
+	print("	")
+	vi = getRgb(p)
+	print([vi[0], vi[1], vi[2]])
+	vt = [math.floor(vi[0] * (mag)), math.floor(vi[1] * (mag)), math.floor(vi[2] * (mag))]
+	return vt
 
 def setPose(cf, xCord, yCord):
 	posi = (0, yCord, xCord, 0)
