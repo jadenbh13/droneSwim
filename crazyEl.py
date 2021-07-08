@@ -180,9 +180,15 @@ def ledTiming(x, y, ts):
 	fileSet("colRec15.txt", R, G, B, ts)
 	return vt # Return RGB array
 
+def setPose(cf, xCord, yCord):
+	posi = (0, yCord, xCord, 0)
+	cf.commander.send_position_setpoint(xCord, yCord, 1.1, 0)
+
 def landDrone(cf):
+	setPose(0, 0.2)
+	time.sleep(1)
 	for i in range(30):
-		cf.commander.send_position_setpoint(0, 0, 0.1, 0)
+		cf.commander.send_position_setpoint(0, 0, 0.2, 0)
 		time.sleep(0.1)
 	cf.commander.send_stop_setpoint()
 
@@ -206,9 +212,6 @@ def setLed(cf, R, G, B):
 		mem[0].leds[11].set(r=R,   g=G, b=B)"""
 		mem[0].write_data(None)
 
-def setPose(cf, xCord, yCord):
-	posi = (0, yCord, xCord, 0)
-	cf.commander.send_position_setpoint(xCord, yCord, 0, 0)
 
 def run_sequence(scf, sequence):
 	cf = scf.cf
@@ -223,7 +226,7 @@ def run_sequence(scf, sequence):
 				afy = open("ardY.txt", "r")
 				ci = open("cycs.txt", "r")
 				cic = ci.read()
-				cycleN = int(ci)
+				cycleN = int(cic)
 				axC = afx.read()
 				ayC = afy.read()
 				amX = float(axC)
@@ -241,6 +244,15 @@ def run_sequence(scf, sequence):
 				#realY = math.atan(yC / xC)
 				fileSet("cordRec15.txt", mX, mY, el, tm)
 				#setPose(cf, mX, mY)
+				if cycleN == 1:
+					print("   ")
+					print("   ")
+					print("Deads")
+					print("   ")
+					print("   ")
+					print('Closing!')
+					#landDrone()
+					break
 			except Exception as e:
 				print(e)
 				if e == KeyboardInterrupt:
