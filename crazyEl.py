@@ -242,7 +242,7 @@ def getRgb(inp):
 
 
 def ledTiming(x, y, ts):
-	W = complex(-255, 0) # Define fourier operator with x and y input
+	W = complex(1, -1) # Define fourier operator with x and y input
 	newP = 0
 
 	mag = 0
@@ -280,10 +280,11 @@ def ledTiming(x, y, ts):
 		#Blue is highest, G is added
 		#Cyan colour is produced
 	print(mag)
-
-	R = math.floor(r * (mag))
-	G = math.floor(g * (mag))
-	B = math.floor(b * (mag))
+	vi = getRgb(p)
+	print([vi[0], vi[1], vi[2]])
+	R = math.floor(vi[0] * (mag))
+	G = math.floor(vi[1] * (mag))
+	B = math.floor(vi[2] * (mag))
 	#B = B - 50
 	bt = [R, G, B]
 	nb = max(bt)
@@ -296,9 +297,7 @@ def ledTiming(x, y, ts):
 	#Multiplied by magnitude for fade with distance than by 2 for brighter overall
 	#print(f"{R}, {G}, {B}, {p}")
 	print("	")
-	vi = getRgb(p)
-	print([vi[0], vi[1], vi[2]])
-	vt = [math.floor(vi[0] * (mag)), math.floor(vi[1] * (mag)), math.floor(vi[2] * (mag))]
+	vt = [R, G, B]
 	return vt
 
 def setPose(cf, xCord, yCord):
@@ -306,10 +305,10 @@ def setPose(cf, xCord, yCord):
 	cf.commander.send_position_setpoint(xCord, yCord, 1.1, 0)
 
 def landDrone(cf):
-	setPose(0, 0.2)
+	setPose(cf, 0, 0.1)
 	time.sleep(1)
 	for i in range(30):
-		cf.commander.send_position_setpoint(0, 0, 0.2, 0)
+		cf.commander.send_position_setpoint(0, 0, 0.23, 0)
 		time.sleep(0.1)
 	cf.commander.send_stop_setpoint()
 
@@ -372,7 +371,7 @@ def run_sequence(scf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					#landDrone()
+					landDrone(cf)
 					break
 			except Exception as e:
 				print(e)
@@ -383,7 +382,7 @@ def run_sequence(scf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					#landDrone()
+					#landDrone(cf)
 					break
 
 	except KeyboardInterrupt:
@@ -394,7 +393,7 @@ def run_sequence(scf, sequence):
 		print("   ")
 		print("   ")
 		print('Closing!')
-		#landDrone()
+		#landDrone(cf)
 	# Make sure that the last packet leaves before the link is closed
 	# since the message queue is not flushed before closing
 
