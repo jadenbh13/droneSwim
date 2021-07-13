@@ -242,7 +242,7 @@ def getRgb(inp):
 
 
 def ledTiming(x, y, ts):
-	W = complex(1, -1) # Define fourier operator with x and y input
+	W = complex(0, -255) # Define fourier operator with x and y input
 	newP = 0
 
 	mag = 0
