@@ -1,13 +1,3 @@
-################################################################################
-# © Keysight Technologies 2016
-#
-# You have a royalty-free right to use, modify, reproduce and distribute
-# the Sample Application Files (and/or any modified version) in any way
-# you find useful, provided that you agree that Keysight Technologies has no
-# warranty, obligations or liability for any Sample Application Files.
-#
-################################################################################
-
 import pyvisa as visa
 
 
@@ -27,10 +17,6 @@ def find(searchString):
 
 print('Find all devices and interfaces:\n')
 find('?*')
-
-# You can specify other device types using different search strings. Here are some common examples:
-
-# All instruments (no INTFC, BACKPLANE or MEMACC)
 find('?*INSTR')
 # PXI modules
 find('PXI?*INSTR')

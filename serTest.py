@@ -3,8 +3,8 @@ import pyvisa as visa
 
 VISA_ADDRESS2 = 'USB0::10893::257::MY54500309::0::INSTR'
 VISA_ADDRESS1 = 'USB0::10893::513::MY57700960::0::INSTR'
-file1 = 'coordX.txt'
-file2 = 'coordY.txt'
+file1 = 'ardX.txt'
+file2 = 'ardY.txt'
 
 try:
 	resourceManager = visa.ResourceManager()
@@ -18,8 +18,8 @@ try:
 		session2.read_termination = '\n'"""
 
 	while True:
-		session1.write('*TRG')
-		session1.write('READ?')
+		session1.write('DATA.LAST?')
+		session1.write('DATA.LAST?')
 		idn1 = float((session1.read()).rstrip('\n'))
 
 		session2.write('*TRG')

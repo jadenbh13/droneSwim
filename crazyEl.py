@@ -242,7 +242,7 @@ def getRgb(inp):
 
 
 def ledTiming(x, y, ts):
-	W = complex(0, -255) # Define fourier operator with x and y input
+	W = complex(x, y) # Define fourier operator with x and y input
 	newP = 0
 
 	mag = 0
@@ -305,10 +305,17 @@ def setPose(cf, xCord, yCord):
 	cf.commander.send_position_setpoint(xCord, yCord, 1.1, 0)
 
 def landDrone(cf):
-	setPose(cf, 0, 0.1)
-	time.sleep(1)
 	for i in range(30):
-		cf.commander.send_position_setpoint(0, 0, 0.23, 0)
+		cf.commander.send_position_setpoint(0.1, 0.1, 1.1, 0)
+		time.sleep(0.1)
+	for i in range(30):
+		cf.commander.send_position_setpoint(0, 0, 0.5, 0)
+		time.sleep(0.1)
+	for i in range(30):
+		cf.commander.send_position_setpoint(0, 0, 0.2, 0)
+		time.sleep(0.1)
+	for i in range(30):
+		cf.commander.send_position_setpoint(0, 0, 0.1, 0)
 		time.sleep(0.1)
 	cf.commander.send_stop_setpoint()
 
@@ -332,12 +339,27 @@ def setLed(cf, R, G, B):
 		mem[0].leds[11].set(r=R,   g=G, b=B)"""
 		mem[0].write_data(None)
 
+def takeoff(cf):
+	bv = 0
+	while bv < 1.1:
+		print(bv)
+		cf.commander.send_position_setpoint(0, 0, bv, 0)
+		time.sleep(0.1)
+		bv += 0.01
+def land(cf):
+	bv = 1.1
+	while bv > 0:
+		print(bv)
+		cf.commander.send_position_setpoint(0, 0, bv, 0)
+		time.sleep(0.1)
+		bv -= 0.01
+	print("End")
+	cf.commander.send_stop_setpoint()
 
-def run_sequence(scf, sequence):
+def run_sequence(cf, sequence):
 	cf = scf.cf
 	try:
-		#setPose(cf, 0, 0)
-		time.sleep(1)
+		#takeoff(cf)
 		while True:
 			try:
 				end = time.time()
@@ -371,7 +393,7 @@ def run_sequence(scf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					landDrone(cf)
+					#land(cf)
 					break
 			except Exception as e:
 				print(e)
@@ -382,7 +404,7 @@ def run_sequence(scf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					#landDrone(cf)
+					#land(cf)
 					break
 
 	except KeyboardInterrupt:
@@ -393,7 +415,7 @@ def run_sequence(scf, sequence):
 		print("   ")
 		print("   ")
 		print('Closing!')
-		#landDrone(cf)
+		#land(cf)
 	# Make sure that the last packet leaves before the link is closed
 	# since the message queue is not flushed before closing
 
