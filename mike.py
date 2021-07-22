@@ -602,7 +602,6 @@ def run_sequence(cf, sequence):
 					break
 
 	except KeyboardInterrupt:
-
 		print("   ")
 		print("   ")
 		print("Deads")
