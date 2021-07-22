@@ -32,8 +32,14 @@ p = 0
 start = time.time()
 mn = 0
 front = True
-cycleN = 0
-
+cycleN = 20
+lasT = 100
+prevNum = 0
+xPos = 0
+yPos = 0
+rV = 0
+gV = 0
+bV = 0
 """def pie(scr,color,center,radius,start_angle,stop_angle):
 	theta=start_angle
 	while theta <= stop_angle:
@@ -245,8 +251,8 @@ def getRgb(inp):
 
 
 def ledTiming(xs, ys, ts):
-	x = xs * 2
-	y = ys * 2
+	x = xs * 20
+	y = ys * 20
 	W = complex(x, y) # Define fourier operator with x and y input
 	newP = 0
 
@@ -256,7 +262,6 @@ def ledTiming(xs, ys, ts):
 
 
 	mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
-	print("	")
 	p = 180 - ((cmath.phase(W))/o) # phase shift
 	#print(p)
 	if p > 180:
@@ -329,30 +334,28 @@ def setLed(cf, R, G, B):
 	# Get LED memory and write to it
 	mem = cf.mem.get_mems(MemoryElement.TYPE_DRIVER_LED)
 	if len(mem) > 0:
-		#mem[0].leds[0].set(r=R,   g=G, b=B)
-		#mem[0].leds[1].set(r=R,   g=G, b=B)
-		mem[0].leds[2].set(r=R,   g=G, b=B)
-		mem[0].leds[3].set(r=R,   g=G, b=B)
-		mem[0].leds[4].set(r=R,   g=G, b=B)
-		"""mem[0].leds[5].set(r=R,   g=G, b=B)
-		mem[0].leds[6].set(r=R,   g=G, b=B)
-		mem[0].leds[7].set(r=R,   g=G, b=B)
-		mem[0].leds[8].set(r=R,   g=G, b=B)
-		mem[0].leds[9].set(r=R,   g=G, b=B)
-		mem[0].leds[10].set(r=R,   g=G, b=B)
-		mem[0].leds[11].set(r=R,   g=G, b=B)"""
-		mem[0].write_data(None)
+		if B < 200:
+			mem[0].leds[3].set(r=R,   g=G, b=B)
+			mem[0].write_data(None)
+		else:
+			mem[0].leds[2].set(r=R,   g=G, b=B)
+			mem[0].leds[3].set(r=R,   g=G, b=B)
+			mem[0].leds[4].set(r=R,   g=G, b=B)
+			mem[0].write_data(None)
 
 def takeoff(cf):
 	bv = 0
-	while bv < 0.5:
+	time.sleep(30)
+	while bv < 0.58:
+		setLed(cf, 0, 0, 0)
 		print(bv)
 		cf.commander.send_position_setpoint(0, 0, bv, 0)
 		time.sleep(0.1)
 		bv += 0.01
 def land(cf):
-	bv = 0.5
+	bv = 0.58
 	while bv > 0:
+		setLed(cf, 0, 0, 0)
 		print(bv)
 		cf.commander.send_position_setpoint(0, 0, bv, 0)
 		time.sleep(0.1)
@@ -360,39 +363,189 @@ def land(cf):
 	print("End")
 	cf.commander.send_stop_setpoint()
 
-def sins(real, im):
+def sins(cf, real, im):
 	global front
 	global mn
 	global cycleN
+	#print(mn / 10)
+	#print(mn / 10)
 	if front == True:
-		mn += 0.0001
+		mn += 0.001
 		if mn > (2 * math.pi):
 			front = False
 	elif front == False:
-		mn -= 0.0001
-		if mn < 0:
+		mn -= 0.001
+		if mn < 0.1:
 			cycleN += 1
 			front = True
-	#print(mn / 10)
-	#print(mn / 10)
 	phs = 0
-	tb = abs(math.sqrt((real ** 2) + (im ** 2)))
-	amp = 1
-	f = 80
+	dF = (100*math.pi)/167
+	tb = abs(complex(real, im))
+	amp = tb
+	f = dF
 	tn = math.atan(im / real)
-	print(tn)
-	sig = (amp * ((math.sin((2 * math.pi) * f * ((mn / 30) + tn)))))
-	#print(sig / 10)
-	#print(cycleN)
-	#print(sig / 10)
+	leT = ledTiming(amX, amY, tm)
+	setLed(cf, leT[0], leT[1], leT[2])
+	"""if tn > math.pi:
+		if real>im:
+			real -= math.pi/180
+			im += math.pi/180
+		else:
+			im -= math.pi/180
+			real += math.pi/180
+	else:
+		if real>im:
+			real += math.pi/180
+			im -= math.pi/180
+		else:
+			im += math.pi/180
+			real -= math.pi/180"""
+	tm = time.time()
+	sig = amp * (math.sin((mn * f)))
+	print(tb)
+	print("  ")
+	print(f"X:{sig}, Y:{mn}")
+
 	ti = 1
-	time.sleep((0.001) * ti)
-	return (mn / 10), (sig / 10)
+	time.sleep((0.0001) * ti)
+	return (sig / 10), (mn / 10)
+
+def testSin(cf, real, im):
+	global front
+	global mn
+	global cycleN
+	global prevNum
+	currNum = (mn % (2 * math.pi))
+	if front == True:
+		mn += 0.0006
+		if mn > ((2 * math.pi) - 0.001):
+			cycleN += 1
+			mn = 0
+	prevNum = (mn % (2 * math.pi))
+	amp = (cycleN + 1) / 10
+	desAngle = 30
+	tm = time.time()
+	rads = (mn + math.radians(180))
+	x = amp * ((math.sin(rads)))
+	y = amp * ((math.cos(rads)))
+	leT = ledTiming(real, im, tm)
+	setLed(cf, leT[0], leT[1], leT[2])
+	if y < 0:
+		y = 0
+	if y != 0:
+		ang = math.degrees(math.atan2(x,y))
+		if abs(ang) < (desAngle / 2):
+			print(ang)
+			leT = ledTiming(real, im, tm)
+			setLed(cf, leT[0], leT[1], leT[2])
+		else:
+			k = 0
+			#setLed(cf, 0, 0, 0)
+	else:
+		k = 0
+		#setLed(cf, 0, 0, 0)
+	xs = (x)
+	ys = (y)
+	#print(mn)
+	#print(cycleN)
+	print((xs / 10), (ys / 10))
+	time.sleep(0.0001)
+	return xs, ys
+
+def testSin2(cf, real, im):
+	global front
+	global mn
+	global cycleN
+	global prevNum
+	global xPos
+	global yPos
+	currNum = (mn % (2 * math.pi))
+	if front == True:
+		mn += 0.0008
+		if mn > ((2 * math.pi) - 0.001):
+			cycleN += 1
+			mn = 0
+	prevNum = (mn % (2 * math.pi))
+	amp = (cycleN + 1) / 5
+	desAngle = 30
+	tm = time.time()
+	rads = (mn + math.radians(90))
+	x = amp * ((math.sin(rads)))
+	y = amp * ((math.cos(rads)))
+	if y < 0:
+		y = 0
+	if y != 0:
+		ang = math.degrees(math.atan2(x,y))
+		if abs(ang) < (desAngle / 2):
+			print(ang)
+			xPos = x
+			yPos = y
+			#leT = ledTiming(real, im, tm)
+			#setLed(cf, leT[0], leT[1], leT[2])
+		else:
+			k = 0
+			#setLed(cf, 0, 0, 0)
+	else:
+		k = 0
+		#setLed(cf, 0, 0, 0)
+	xs = (xPos)
+	ys = (yPos)
+	#print(mn)
+	print(cycleN)
+	print((xs / 10), (ys / 10))
+	time.sleep(0.0001)
+	return xs, ys
+
+def testSin3(cf, real, im):
+	global front
+	global mn
+	global cycleN
+	global prevNum
+	global mnY
+	currNum = (mn % (2 * math.pi))
+	addNum = 0.0005
+	if mn > ((2 * math.pi) - 0.001):
+		mn = 0
+	if front == True:
+		mn += addNum
+	if front == False:
+		mn -= addNum
+	prevNum = (mn % (2 * math.pi))
+	amp = (cycleN) / 10
+	desAngle = 90
+	rads = (mn + math.radians(0))
+	x = amp * ((math.sin(rads)))
+	y = (amp * ((math.cos(rads))))
+	mnY = amp * ((math.cos(mn)))
+	tm = time.time()
+	"""if mn > 285:
+		front = False
+	elif mn < 255:
+		front = True"""
+	if y < 0:
+		y = 0
+	ang = math.degrees(math.atan2(x,y))
+	degAng = 70
+	leT = ledTiming(real, im, tm)
+	setLed(cf, leT[0], leT[1], leT[2])
+	print(ang)
+	if ang != 90.0 or ang != -90.0:
+		if front == True:
+			if ang > (degAng / 2):
+				front = False
+				cycleN += 1
+		if front == False:
+			if ang < (0 - (degAng / 2)):
+				front = True
+				cycleN += 1
+	#print(cycleN)
+	time.sleep(0.0001)
+	return x, y
 
 def run_sequence(cf, sequence):
 	cf = scf.cf
 	try:
-		#takeoff(cf)
+		takeoff(cf)
 		while True:
 			try:
 				end = time.time()
@@ -404,26 +557,37 @@ def run_sequence(cf, sequence):
 				ayC = afy.read()
 				amX = float(axC)
 				amY = float(ayC)
-				si = sins(amX, amY)
-				mX = 0.5 + si[1]
-				mY = si[0]
+				if amY > 10.0:
+					amY == 10.0
+				if amX > 10.0:
+					amX == 10.0
+				if amY < -10.0:
+					amY == -10.0
+				if amX < -10.0:
+					amX == -10.0
+				si = testSin3(cf, amX, amY)
+				lim = 0.4
+				ori = 0.58
+				mX = ori + (si[0] / 10)
+				mY = (si[1] / 10) - 0.2
+				if mX < (ori - lim):
+					mX = ori - lim
+				if mX > (ori + lim):
+					mX = ori + lim
 				tm = time.time()
-				leT = ledTiming(amX, amY, tm)
-				setLed(cf, leT[0], leT[1], leT[2])
-				"""print(mX)
-				print("  ")
-				print(mY)"""
-				#realY = math.atan(yC / xC)
-				#fileSet("cordRec15.txt", mX, mY, el, tm)
-				#setPose(cf, mX, mY)
-				if cycleN == 1:
+				print(mX, mY)
+				#fileSet("newSoundAmp1.txt", mX, mY, amX, amY)
+				setPose(cf, mX, mY)
+				#if (el == (2 * math.pi)):
+				#	cycleN += 1
+				if cycleN == 40:
 					print("   ")
 					print("   ")
 					print("Deads")
 					print("   ")
 					print("   ")
 					print('Closing!')
-					#land(cf)
+					land(cf)
 					break
 			except Exception as e:
 				print(e)
@@ -434,7 +598,7 @@ def run_sequence(cf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					#land(cf)
+					land(cf)
 					break
 
 	except KeyboardInterrupt:
@@ -445,7 +609,7 @@ def run_sequence(cf, sequence):
 		print("   ")
 		print("   ")
 		print('Closing!')
-		#land(cf)
+		land(cf)
 	# Make sure that the last packet leaves before the link is closed
 	# since the message queue is not flushed before closing
 

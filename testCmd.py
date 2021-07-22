@@ -57,7 +57,24 @@ try:
 		try:
 			r1 = convertSci(hu1)
 			r2 = convertSci(hu2)
-			print(f"Real: {r1}, Imaginary: {r2}")
+			real = r1
+			im = r2
+			tn = math.atan(im / real)
+			"""if tn > math.pi:
+				if real>im:
+					real -= math.pi/180
+					im += math.pi/180
+				else:
+					im -= math.pi/180
+					real += math.pi/180
+			else:
+				if real>im:
+					real += math.pi/180
+					im -= math.pi/180
+				else:
+					im += math.pi/180
+					real -= math.pi/180"""
+			print(f"Real: {real}, Imaginary: {im}, Phase: {tn}")
 			with open(file1, 'w') as filetowrite:
 				filetowrite.write(str(r1))
 			with open(file2, 'w') as filetowrite:

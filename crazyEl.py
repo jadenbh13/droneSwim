@@ -341,6 +341,7 @@ def setLed(cf, R, G, B):
 
 def takeoff(cf):
 	bv = 0
+	setLed(cf, 0, 0, 0)
 	while bv < 1.1:
 		print(bv)
 		cf.commander.send_position_setpoint(0, 0, bv, 0)
@@ -348,6 +349,7 @@ def takeoff(cf):
 		bv += 0.01
 def land(cf):
 	bv = 1.1
+	setLed(cf, 0, 0, 0)
 	while bv > 0:
 		print(bv)
 		cf.commander.send_position_setpoint(0, 0, bv, 0)
