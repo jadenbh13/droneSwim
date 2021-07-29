@@ -14,6 +14,18 @@ import pygame
 from math import sin,cos,radians
 import random
 import threading
+from simple_pid import PID
+pid = PID(0.3, 0.05, 0.01, setpoint=0)
+
+def getInp():
+	afx = open("ardX.txt", "r")
+	afy = open("ardY.txt", "r")
+	axC = float(afx.read())
+	ayC = float(afy.read())
+	phs = math.atan(ayC / axC)
+	return axC, ayC, phs
+hb = getInp()
+v = hb[2]
 # URI to the Crazyflie to connect to
 uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
 
@@ -32,7 +44,7 @@ p = 0
 start = time.time()
 mn = 0
 front = True
-cycleN = 20
+cycleN = 10
 lasT = 100
 prevNum = 0
 xPos = 0
@@ -40,6 +52,9 @@ yPos = 0
 rV = 0
 gV = 0
 bV = 0
+BaseX = 0.58
+BaseY = 0
+boolAlt = True
 """def pie(scr,color,center,radius,start_angle,stop_angle):
 	theta=start_angle
 	while theta <= stop_angle:
@@ -350,16 +365,16 @@ def takeoff(cf):
 		setLed(cf, 0, 0, 0)
 		print(bv)
 		cf.commander.send_position_setpoint(0, 0, bv, 0)
-		time.sleep(0.1)
-		bv += 0.01
+		time.sleep(0.01)
+		bv += 0.001
 def land(cf):
 	bv = 0.58
 	while bv > 0:
 		setLed(cf, 0, 0, 0)
 		print(bv)
 		cf.commander.send_position_setpoint(0, 0, bv, 0)
-		time.sleep(0.1)
-		bv -= 0.01
+		time.sleep(0.01)
+		bv -= 0.001
 	print("End")
 	cf.commander.send_stop_setpoint()
 
@@ -503,7 +518,7 @@ def testSin3(cf, real, im):
 	global prevNum
 	global mnY
 	currNum = (mn % (2 * math.pi))
-	addNum = 0.0005
+	addNum = 0.0007
 	if mn > ((2 * math.pi) - 0.001):
 		mn = 0
 	if front == True:
@@ -511,7 +526,7 @@ def testSin3(cf, real, im):
 	if front == False:
 		mn -= addNum
 	prevNum = (mn % (2 * math.pi))
-	amp = (cycleN) / 10
+	amp = (cycleN) / 5
 	desAngle = 90
 	rads = (mn + math.radians(0))
 	x = amp * ((math.sin(rads)))
@@ -525,10 +540,10 @@ def testSin3(cf, real, im):
 	if y < 0:
 		y = 0
 	ang = math.degrees(math.atan2(x,y))
-	degAng = 70
+	degAng = 90
 	leT = ledTiming(real, im, tm)
 	setLed(cf, leT[0], leT[1], leT[2])
-	print(ang)
+	print(cycleN)
 	if ang != 90.0 or ang != -90.0:
 		if front == True:
 			if ang > (degAng / 2):
@@ -542,10 +557,36 @@ def testSin3(cf, real, im):
 	time.sleep(0.0001)
 	return x, y
 
+
+def modulePhase (real, im, xpos,ypos, boolAlt):
+	XShiftBase = 0.00000796870733408
+	YShiftBase = 0.0018749786719433
+	PhaseShiftBase = 0.002061312633960774895823483634619814137245752021501360338
+	phaseAngle = math.atan(im / real)
+	# if(ypos == )
+	if (boolAlt):
+		if phaseAngle>math.pi:
+			xpos+= (phaseAngle/PhaseShiftBase)*(XShiftBase)
+			ypos-= (phaseAngle/PhaseShiftBase)*(YShiftBase)
+		else:
+			xpos+= (phaseAngle/PhaseShiftBase)*(XShiftBase)
+			ypos+= (phaseAngle/PhaseShiftBase)*(YShiftBase)
+	else:
+		if phaseAngle>math.pi:
+			xpos-= (phaseAngle/PhaseShiftBase)*(XShiftBase)
+			ypos+= (phaseAngle/PhaseShiftBase)*(YShiftBase)
+		else:
+			xpos+= (phaseAngle/PhaseShiftBase)*(XShiftBase)
+			ypos-= (phaseAngle/PhaseShiftBase)*(YShiftBase)
+	return xpos, ypos, phaseAngle
+
 def run_sequence(cf, sequence):
 	cf = scf.cf
+	global BaseX
+	global BaseY
+	global v
 	try:
-		takeoff(cf)
+		#takeoff(cf)
 		while True:
 			try:
 				end = time.time()
@@ -553,10 +594,9 @@ def run_sequence(cf, sequence):
 				sinVal = math.sin(el)
 				afx = open("ardX.txt", "r")
 				afy = open("ardY.txt", "r")
-				axC = afx.read()
-				ayC = afy.read()
-				amX = float(axC)
-				amY = float(ayC)
+				nj = getInp()
+				amX = nj[0]
+				amY = nj[1]
 				if amY > 10.0:
 					amY == 10.0
 				if amX > 10.0:
@@ -575,20 +615,50 @@ def run_sequence(cf, sequence):
 				if mX > (ori + lim):
 					mX = ori + lim
 				tm = time.time()
-				print(mX, mY)
-				#fileSet("newSoundAmp1.txt", mX, mY, amX, amY)
-				setPose(cf, mX, mY)
-				#if (el == (2 * math.pi)):
-				#	cycleN += 1
-				if cycleN == 40:
-					print("   ")
-					print("   ")
-					print("Deads")
-					print("   ")
-					print("   ")
-					print('Closing!')
-					land(cf)
-					break
+				phaseAng = math.atan(amY / amX)
+				control = pid(v)
+				#print(control, math.degrees(phaseAng))
+				v = phaseAng
+				desRan = 10
+				phaseAngle = math.degrees(math.atan(amY / amX))
+				angs = abs(phaseAngle) - abs(desRan)
+				i = 0
+				if(phaseAngle>desRan):
+					out = abs(angs / 1000)
+					mY += (out / 2)
+					print(mX, mY, phaseAngle, out)
+					bo = getInp()
+					amX = bo[0]
+					amY = bo[1]
+					#setPose(cf, mX, mY)
+					print("Forward")
+					phaseAngle = math.degrees(math.atan(amY / amX))
+					#time.sleep(0.0005)
+				elif(phaseAngle<(0 - desRan)):
+					out = abs(angs / 1000)
+					mY -= (out / 2)
+					print(mX, mY, phaseAngle, out)
+					bo = getInp()
+					amX = bo[0]
+					amY = bo[1]
+					#setPose(cf, mX, mY)
+					print("Back")
+					phaseAngle = math.degrees(math.atan(amY / amX))
+					#time.sleep(0.0005)
+				else:
+					print(mX, mY, math.degrees(math.atan(amY / amX)))
+					print("Stable")
+					#setPose(cf, mX, mY)
+				fileSet("pids3.txt", mX, mY, amX, amY)
+				# if cycleN == 25:
+				# 	print("   ")
+				# 	print("   ")
+				# 	print("Deads")
+				# 	print("   ")
+				# 	print("   ")
+				# 	print('Closing!')
+				# 	#land(cf)
+				# 	break
 			except Exception as e:
 				print(e)
 				if e == KeyboardInterrupt:
@@ -598,7 +668,7 @@ def run_sequence(cf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					land(cf)
+					#land(cf)
 					break
 
 	except KeyboardInterrupt:
@@ -608,7 +678,7 @@ def run_sequence(cf, sequence):
 		print("   ")
 		print("   ")
 		print('Closing!')
-		land(cf)
+		#land(cf)
 	# Make sure that the last packet leaves before the link is closed
 	# since the message queue is not flushed before closing
 

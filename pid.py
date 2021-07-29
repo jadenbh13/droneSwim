@@ -1,7 +1,6 @@
 from simple_pid import PID, controlled_system
 pid = PID(1, 0.1, 0.05, setpoint=1)
 
-# Assume we have a system we want to control in controlled_system
 v = controlled_system.update(0)
 
 while True:

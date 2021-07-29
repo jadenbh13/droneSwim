@@ -6,6 +6,7 @@ import math
 import time
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+import cmath
 
 VISA_ADDRESS2 = 'USB0::10893::257::MY54500309::0::INSTR'
 VISA_ADDRESS1 = 'USB0::10893::513::MY57700960::0::INSTR'
@@ -59,7 +60,10 @@ try:
 			r2 = convertSci(hu2)
 			real = r1
 			im = r2
-			tn = math.atan(im / real)
+			W = complex(real, im)
+			mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
+			phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
+			tn = phaseAngle
 			"""if tn > math.pi:
 				if real>im:
 					real -= math.pi/180
@@ -74,7 +78,7 @@ try:
 				else:
 					im += math.pi/180
 					real -= math.pi/180"""
-			print(f"Real: {real}, Imaginary: {im}, Phase: {tn}")
+			print(f"Phase: {tn}, Real: {real}, Im: {im}, Mag: {mag}")
 			with open(file1, 'w') as filetowrite:
 				filetowrite.write(str(r1))
 			with open(file2, 'w') as filetowrite:
