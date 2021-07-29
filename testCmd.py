@@ -15,6 +15,8 @@ file2 = 'ardY.txt'
 
 charList = [' ' , "'", 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 numbList = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-']
+PhaseList = []
+
 
 def onlyChars(st):
 	nS = ""
@@ -38,7 +40,10 @@ def fileSet(name, one):
 	with open(name, "a") as files:
 		files.write(str(one))
 
-
+def BlankingLights(phaseVal):
+	a = abs(phaseVal-PhaseList[len(PhaseList)-1])
+	b = max(phaseVal, PhaseList[len(PhaseList)-1])
+	return (a/b)
 def convertSci(inp):
 	inpS = inp.lower()
 	return float(inpS)
@@ -64,6 +69,11 @@ try:
 			mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
 			phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
 			tn = phaseAngle
+			PhaseList.append(tn)
+			ratio = BlankingLights(tn)
+			if ratio > 0.5:
+				mag = 0
+			PhaseList.append(tn)
 			"""if tn > math.pi:
 				if real>im:
 					real -= math.pi/180
@@ -78,7 +88,7 @@ try:
 				else:
 					im += math.pi/180
 					real -= math.pi/180"""
-			print(f"Phase: {tn}, Real: {real}, Im: {im}, Mag: {mag}")
+			print(f"Phase: {tn}, Magnitude {mag}")
 			with open(file1, 'w') as filetowrite:
 				filetowrite.write(str(r1))
 			with open(file2, 'w') as filetowrite:

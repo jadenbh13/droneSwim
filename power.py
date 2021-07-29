@@ -57,6 +57,7 @@ BaseY = 0
 boolAlt = True
 mn = BaseX
 basePhase = 0
+PhaseList = []
 """def pie(scr,color,center,radius,start_angle,stop_angle):
 	theta=start_angle
 	while theta <= stop_angle:
@@ -266,8 +267,19 @@ def getRgb(inp):
 	finalColour = perCol(colL[inX], colL[nonInx], maxP, minP)
 	return finalColour
 
-magVal = 5
-def ledTiming(xs, ys, ts):
+magVal = 2
+
+def BlankingLights(phaseVal):
+	a = abs(phaseVal-PhaseList[len(PhaseList)-1])
+	b = max(phaseVal, PhaseList[len(PhaseList)-1])
+	return (a/b)
+
+phases = [134, 225, 315]
+maxi = 0.85
+mini = 0.15
+range = 50
+
+def ledTiming(xs, ys, ts, mX, mY):
 	x = xs
 	y = ys
 	W = complex(x, y) # Define fourier operator with x and y input
@@ -279,11 +291,15 @@ def ledTiming(xs, ys, ts):
 	mgs = (abs(x) + abs(y)) / 2
 
 	mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
+
+
 	p = (180 - ((cmath.phase(W))/o)) # phase shift
 	#print(p)
 	if p > 180:
 		newP = 180 - p
 	#print(newP)
+
+
 	r = 0
 	b = 0
 	g = 0
@@ -306,14 +322,15 @@ def ledTiming(xs, ys, ts):
 		b = (upper - p) / 72
 		#Blue is highest, G is added
 		#Cyan colour is produced
-	print(mgs)
+	print(p)
 	vi = getRgb(p)
 	#print([vi[0], vi[1], vi[2]])
-	if mag > 0:
-		R = math.floor(vi[0] * (mgs * magVal))
-		G = math.floor(vi[1] * (mgs * magVal))
-		B = math.floor(vi[2] * (mgs * magVal))
-	else:
+	R = math.floor(vi[0] * (mag ** 2.2))
+	G = math.floor(vi[1] * (mag ** 2.2))
+	B = math.floor(vi[2] * (mag ** 2.2))
+
+	if mag < 1:
+		print("Phase not detected")
 		R = 0
 		G = 0
 		B = 0
@@ -331,9 +348,10 @@ def ledTiming(xs, ys, ts):
 	vt = [R, G, B]
 	return vt
 
+maxH = 1.0
 def setPose(cf, xCord, yCord):
 	posi = (0, yCord, xCord, 0)
-	cf.commander.send_position_setpoint(xCord, yCord, 1.1, 0)
+	cf.commander.send_position_setpoint(xCord, yCord, maxH, 0)
 
 def landDrone(cf):
 	for i in range(30):
@@ -367,10 +385,10 @@ def setLed(cf, R, G, B):
 			mem[0].leds[4].set(r=R,   g=G, b=B)
 			mem[0].write_data(None)
 
-highNum = 0.9
+highNum = maxH
 def takeoff(cf):
 	bv = 0
-	time.sleep(30)
+	time.sleep(40)
 	while bv < highNum:
 		setLed(cf, 0, 0, 0)
 		print(bv)
@@ -398,13 +416,13 @@ def testSin3(cf, real, im, tm):
 	mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
 	phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
 	phase = 0
-	amp = 3
+	amp = 3.5
 	freq = 5
 	sinWave = amp * math.sin((mn * freq) + math.radians(phase))
 	addVal = 0.0003
 	if mn > ((2 * math.pi) + 1):
 		if front == True:
-			cycleN += 1
+			cycleN += 0
 			front = False
 	if mn < 0:
 		if front == False:
@@ -417,7 +435,7 @@ def testSin3(cf, real, im, tm):
 	#time.sleep(0.01)
 	return sinWave, mn
 
-texFile = "powerText.txt"
+texFile = "colourLine.txt"
 
 def run_sequence(cf, sequence):
 	cf = scf.cf
@@ -427,9 +445,10 @@ def run_sequence(cf, sequence):
 	global basePhase
 	try:
 		#takeoff(cf)
-		basePhase = 50
+		basePhase = 44
 		while True:
 			try:
+				#est = reset_estimator(scf)
 				end = time.time()
 				el = end - start
 				sinVal = math.sin(el)
@@ -445,39 +464,39 @@ def run_sequence(cf, sequence):
 				W = complex(amX, amY)
 				mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
 				phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
-				if phaseAngle > 180:
-					phaseAngle = 180 - p
 				#setPose(cf, mX, mY)
 				i = 0
 				red = 2
 				"""while(i<3):
-					angs = (abs(phaseAngle))
+					angs = (abs(phaseAngle) - abs(basePhase))
 					if(phaseAngle>(basePhase + desRan)):
 						out = abs(angs / 1000)
-						mX += (out / red)
-						print(phaseAngle)
+						newV = (out / red)
+						#mX += newV
+						print(newV)
 						bo = getInp()
 						amX = bo[0]
 						amY = bo[1]
 						#setPose(cf, mX, mY)
-						#("Forward")
+						print("Forward")
 						W = complex(amX, amY)
 						mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
-						phaseAngle = ((cmath.phase(W))/(math.pi/180))
+						phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
 						BaseY = mY
 						time.sleep(0.0005)
 					elif(phaseAngle<(basePhase - desRan)):
 						out = abs(angs / 1000)
-						mX -= (out / red)
-						print(phaseAngle)
+						newV = (out / red)
+						#mX -= newV
+						print(newV)
 						bo = getInp()
 						amX = bo[0]
 						amY = bo[1]
 						#setPose(cf, mX, mY)
-						#print("Back")
+						print("Backward")
 						W = complex(amX, amY)
 						mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
-						phaseAngle = ((cmath.phase(W))/(math.pi/180))
+						phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
 						BaseY = mY
 						time.sleep(0.0005)
 					else:
@@ -489,7 +508,7 @@ def run_sequence(cf, sequence):
 				bo = getInp()
 				amX = bo[0]
 				amY = bo[1]
-				leT = ledTiming(amX, amY, 1)
+				leT = ledTiming(amX, amY, 1, mX, mY)
 				setLed(cf, leT[0], leT[1], leT[2])
 				#fileSet(texFile, mX, mY, amX, amY)
 				"""if cycleN == 1:
@@ -500,7 +519,7 @@ def run_sequence(cf, sequence):
 					print("   ")
 					print('Closing!')
 					land(cf)
-					fileSet(texFile, 0, 0, 0, 0)
+					#fileSet(texFile, 0, 0, 0, 0)
 					break"""
 			except Exception as e:
 				print(e)
