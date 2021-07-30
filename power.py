@@ -10,12 +10,11 @@ from cflib.utils import uri_helper
 from cflib.crazyflie.mem import MemoryElement
 import math
 import cmath
-import pygame
+#import pygame
 from math import sin,cos,radians
 import random
 import threading
-from simple_pid import PID
-pid = PID(0.3, 0.05, 0.01, setpoint=0)
+#pid = PID(0.3, 0.05, 0.01, setpoint=0)
 
 def getInp():
 	afx = open("ardX.txt", "r")
@@ -348,12 +347,12 @@ def ledTiming(xs, ys, ts, mX, mY):
 	vt = [R, G, B]
 	return vt
 
-maxH = 1.0
+maxH = 1.05
 def setPose(cf, xCord, yCord):
 	posi = (0, yCord, xCord, 0)
 	cf.commander.send_position_setpoint(xCord, yCord, maxH, 0)
 
-def landDrone(cf):
+"""def landDrone(cf):
 	for i in range(30):
 		cf.commander.send_position_setpoint(0.1, 0.1, 1.1, 0)
 		time.sleep(0.1)
@@ -366,7 +365,7 @@ def landDrone(cf):
 	for i in range(30):
 		cf.commander.send_position_setpoint(0, 0, 0.1, 0)
 		time.sleep(0.1)
-	cf.commander.send_stop_setpoint()
+	cf.commander.send_stop_setpoint()"""
 
 def setLed(cf, R, G, B):
 	cf.param.set_value('ring.effect', '13')
@@ -374,21 +373,15 @@ def setLed(cf, R, G, B):
 	# Get LED memory and write to it
 	mem = cf.mem.get_mems(MemoryElement.TYPE_DRIVER_LED)
 	if len(mem) > 0:
-		if B < 200:
-			mem[0].leds[2].set(r=R,   g=G, b=B)
-			mem[0].leds[3].set(r=R,   g=G, b=B)
-			mem[0].leds[4].set(r=R,   g=G, b=B)
-			mem[0].write_data(None)
-		else:
-			mem[0].leds[2].set(r=R,   g=G, b=B)
-			mem[0].leds[3].set(r=R,   g=G, b=B)
-			mem[0].leds[4].set(r=R,   g=G, b=B)
-			mem[0].write_data(None)
+		mem[0].leds[2].set(r=R,   g=G, b=B)
+		mem[0].leds[3].set(r=R,   g=G, b=B)
+		mem[0].leds[4].set(r=R,   g=G, b=B)
+		mem[0].write_data(None)
 
 highNum = maxH
 def takeoff(cf):
 	bv = 0
-	time.sleep(40)
+	time.sleep(30)
 	while bv < highNum:
 		setLed(cf, 0, 0, 0)
 		print(bv)
@@ -416,10 +409,10 @@ def testSin3(cf, real, im, tm):
 	mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
 	phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
 	phase = 0
-	amp = 3.5
+	amp = 3.1
 	freq = 5
 	sinWave = amp * math.sin((mn * freq) + math.radians(phase))
-	addVal = 0.0003
+	addVal = 0.00035
 	if mn > ((2 * math.pi) + 1):
 		if front == True:
 			cycleN += 0
@@ -435,7 +428,7 @@ def testSin3(cf, real, im, tm):
 	#time.sleep(0.01)
 	return sinWave, mn
 
-texFile = "colourLine.txt"
+texFile = "powerReal.txt"
 
 def run_sequence(cf, sequence):
 	cf = scf.cf
@@ -444,7 +437,7 @@ def run_sequence(cf, sequence):
 	global v
 	global basePhase
 	try:
-		#takeoff(cf)
+		takeoff(cf)
 		basePhase = 44
 		while True:
 			try:
@@ -464,7 +457,7 @@ def run_sequence(cf, sequence):
 				W = complex(amX, amY)
 				mag = abs(W) # get magnitude (increases as antenna gets closer to wire)
 				phaseAngle = 180 - ((cmath.phase(W))/(math.pi/180))
-				#setPose(cf, mX, mY)
+				setPose(cf, mX, mY)
 				i = 0
 				red = 2
 				"""while(i<3):
@@ -510,8 +503,8 @@ def run_sequence(cf, sequence):
 				amY = bo[1]
 				leT = ledTiming(amX, amY, 1, mX, mY)
 				setLed(cf, leT[0], leT[1], leT[2])
-				#fileSet(texFile, mX, mY, amX, amY)
-				"""if cycleN == 1:
+				fileSet(texFile, mX, mY, amX, amY)
+				if cycleN == 1:
 					print("   ")
 					print("   ")
 					print("Deads")
@@ -519,11 +512,10 @@ def run_sequence(cf, sequence):
 					print("   ")
 					print('Closing!')
 					land(cf)
-					#fileSet(texFile, 0, 0, 0, 0)
-					break"""
+					fileSet(texFile, 0, 0, 0, 0)
+					break
 			except Exception as e:
 				print(e)
-				#setPose(cf, mX, BaseY)
 				if e == KeyboardInterrupt:
 					print("   ")
 					print("   ")
@@ -531,7 +523,8 @@ def run_sequence(cf, sequence):
 					print("   ")
 					print("   ")
 					print('Closing!')
-					#land(cf)
+					land(cf)
+					fileSet(texFile, 0, 0, 0, 0)
 					break
 
 	except KeyboardInterrupt:
@@ -541,7 +534,7 @@ def run_sequence(cf, sequence):
 		print("   ")
 		print("   ")
 		print('Closing!')
-		#land(cf)
+		land(cf)
 	# Make sure that the last packet leaves before the link is closed
 	# since the message queue is not flushed before closing
 
